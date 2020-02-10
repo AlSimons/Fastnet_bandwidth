@@ -73,7 +73,7 @@ func main() {
 	ticker := time.NewTicker(1 * time.Second)
 
 	// These next two are never used, since we don't include a way
-	// to cleanly tear down.  We just Ctrl-Y it out of existence.
+	// to cleanly tear down.  We just Ctrl-C it out of existence.
 	// Left them in to remind me ouf how to use channels to coordinate.
 	quit := make(chan struct{})
 	allExit := make(chan int)
