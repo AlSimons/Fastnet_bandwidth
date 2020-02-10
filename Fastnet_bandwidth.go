@@ -9,21 +9,43 @@ import (
 	"time"
 )
 
-var urls = [3]string{ //MAKE SURE DIM MATCHES NUM STRINGS!
-	"http://simonshome.org/tenk_random.txt",
-	"http://simonshome.org/megabyte_random.txt",
-	"http://simonshome.org/two_meg_random.txt",
-	//"http://simonshome.org/four_meg_random.txt",
-	//"http://simonshome.org/six_meg_random.txt",
-	//"http://simonshome.org/ten_meg_random.txt",
-}
-
 var outFilePath = "bandwidth_monitor_log.txt"
 var firstTime = true
 var timeout = time.Duration(90)  // Seconds to wait for a complete response
 var interval = time.Duration(10) // Interval between runs
 
+type fileInfo struct {
+	url  string
+	size int
+}
+
 func main() {
+	//Make a slice of length 0 with a capacity of 10 of fileInfo.
+	urls := make([]fileInfo, 0, 10)
+	urls = append(urls, fileInfo{
+		url:  "http://simonshome.org/tenk_random.txt",
+		size: 10240})
+
+	urls = append(urls, fileInfo{
+		url:  "http://simonshome.org/megabyte_random.txt",
+		size: 1000000})
+
+	urls = append(urls, fileInfo{
+		url:  "http://simonshome.org/two_meg_random.txt",
+		size: 2000000})
+
+	urls = append(urls, fileInfo{
+		url:  "http://simonshome.org/four_meg_random.txt",
+		size: 4000000})
+
+	urls = append(urls, fileInfo{
+		url:  "http://simonshome.org/six_meg_random.txt",
+		size: 6000000})
+
+	urls = append(urls, fileInfo{
+		url:  "http://simonshome.org/ten_meg_random.txt",
+		size: 10000000})
+
 	outputHeaderIfNeeded(outFilePath)
 
 	// Create the ticker with a very short time. We'll replace it
@@ -41,7 +63,7 @@ func main() {
 					ticker = time.NewTicker(interval * time.Minute)
 					firstTime = false
 				}
-				runOverAllSizes()
+				runOverAllSizes(urls)
 			case <-quit:
 				ticker.Stop()
 				allExit <- 1
@@ -54,13 +76,13 @@ func main() {
 	<-allExit
 }
 
-func runOverAllSizes() {
+func runOverAllSizes(urls []fileInfo) {
 	for _, url := range urls {
 		doTest(url)
 	}
 }
 
-func doTest(url string) {
+func doTest(url fileInfo) {
 	tr := &http.Transport{
 		MaxIdleConns:       10,
 		IdleConnTimeout:    timeout * time.Second,
@@ -76,14 +98,15 @@ func doTest(url string) {
 	// are not transferred until the ReadAll() call.  Therefore, we
 	// need to encapsulate both in our timings.
 	startGet := time.Now()
-	response, err := client.Get(url)
+	response, err := client.Get(url.url)
 	endGet := time.Now()
 	getElapsed := endGet.Sub(startGet).Seconds()
 
 	if err != nil {
-		msg := fmt.Sprintf("%s\t%s\t\t\t\t0.0\tget failed with error %s\n",
+		msg := fmt.Sprintf("%s\t%s\t%d\t\t\t0.0\tget failed with error %s\n",
 			startGet.Format("2006-01-02"),
 			startGet.Format("15:04:05"),
+			url.size,
 			err)
 		doLog(msg)
 		return
@@ -95,9 +118,10 @@ func doTest(url string) {
 	endReadAll := time.Now()
 	readElapsed := endReadAll.Sub(startReadAll).Seconds()
 	if err != nil {
-		msg := fmt.Sprintf("%s\t%s\t\t%6.4f\t\t0.0\treading contents failed with: %s\n",
+		msg := fmt.Sprintf("%s\t%s\t%d\t%6.4f\t\t0.0\treading contents failed with: %s\n",
 			startGet.Format("2006-01-02"),
 			startGet.Format("15:04:05"),
+			url.size,
 			getElapsed,
 			err)
 		doLog(msg)
