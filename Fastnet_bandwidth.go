@@ -9,18 +9,33 @@ import (
 	"time"
 )
 
+// Write the output to the current directory.
 var outFilePath = "bandwidth_monitor_log.txt"
+// Keeping track of firstTime lets us get immediate output instead
+// of waiting for the interval timer.
 var firstTime = true
-var timeout = time.Duration(90)  // Seconds to wait for a complete response
-var interval = time.Duration(10) // Interval between runs
+// Seconds to wait for a complete response
+var timeout = time.Duration(90)
+// Interval between runs
+var interval = time.Duration(10)
 
+// Keep track of the file size as well as the URL. This lets us
+// display the size in the log in the event the request times out
+// or otherwise fails.
 type fileInfo struct {
 	url  string
 	size int
 }
 
 func main() {
-	//Make a slice of length 0 with a capacity of 10 of fileInfo.
+	// Make a slice of length 0 with a capacity of 10 of fileInfo.
+	// This is just a convenience. If we were to declare the array
+	// statically instead of using a slice, we would need to be sure
+	// to change the dimension every time we added or commented out
+	// a file.
+
+	//PLEASE CHANGE these URLs if you want to use this and you're not
+	// Al.  These hit on his hosting site.
 	urls := make([]fileInfo, 0, 10)
 	urls = append(urls, fileInfo{
 		url:  "http://simonshome.org/tenk_random.txt",
@@ -50,8 +65,13 @@ func main() {
 
 	// Create the ticker with a very short time. We'll replace it
 	// with the desired time in the go routine on first execution.
-	// This allows us to get our
+	// This allows us to get our first results without waiting
+	// for an interval to elapse.
 	ticker := time.NewTicker(1 * time.Second)
+
+	// These next two are never used, since we don't include a way
+	// to cleanly tear down.  We just Ctrl-Y it out of existence.
+	// Left them in to remind me ouf how to use channels to coordinate.
 	quit := make(chan struct{})
 	allExit := make(chan int)
 
@@ -72,7 +92,7 @@ func main() {
 		}
 	}()
 
-	// Wait forever.
+	// Wait forever. If we let main() complete, the go routine exits.
 	<-allExit
 }
 
@@ -83,6 +103,8 @@ func runOverAllSizes(urls []fileInfo) {
 }
 
 func doTest(url fileInfo) {
+	// Include a Transport to force no compression.  This is probably
+	// not needed.
 	tr := &http.Transport{
 		MaxIdleConns:       10,
 		IdleConnTimeout:    timeout * time.Second,
@@ -95,17 +117,23 @@ func doTest(url fileInfo) {
 
 	// About timings. It SEEMS from experimentation, that the
 	// Initial Get call only opens the connection, and that the data
-	// are not transferred until the ReadAll() call.  Therefore, we
-	// need to encapsulate both in our timings.
+	// are not transferred until the ReadAll() call.  For small files,
+	// the time to set up the connection swamps the transfer time,
+	// resulting in artificially low bandwidths. Track and report the
+	// two times separately.
 	startGet := time.Now()
+	startDate := startGet.Format("2006-01-02")
+	startTime := startGet.Format("15:04:05")
+
 	response, err := client.Get(url.url)
 	endGet := time.Now()
 	getElapsed := endGet.Sub(startGet).Seconds()
 
 	if err != nil {
-		msg := fmt.Sprintf("%s\t%s\t%d\t\t\t0.0\tget failed with error %s\n",
-			startGet.Format("2006-01-02"),
-			startGet.Format("15:04:05"),
+		msg := fmt.Sprintf(
+			"%s\t%s\t%d\t\t\t0.0\tget failed with error %s\n",
+			startDate,
+			startTime,
 			url.size,
 			err)
 		doLog(msg)
@@ -118,9 +146,10 @@ func doTest(url fileInfo) {
 	endReadAll := time.Now()
 	readElapsed := endReadAll.Sub(startReadAll).Seconds()
 	if err != nil {
-		msg := fmt.Sprintf("%s\t%s\t%d\t%6.4f\t\t0.0\treading contents failed with: %s\n",
-			startGet.Format("2006-01-02"),
-			startGet.Format("15:04:05"),
+		msg := fmt.Sprintf(
+			"%s\t%s\t%d\t%6.4f\t\t0.0\treading contents failed with: %s\n",
+			startDate,
+			startTime,
 			url.size,
 			getElapsed,
 			err)
@@ -140,8 +169,8 @@ func doTest(url fileInfo) {
 	megaBitsPerSec := bitsPerSec / 1000000.0
 
 	msg := fmt.Sprintf("%s\t%s\t%d\t%6.4f\t%6.4f\t%3.1f\n",
-		startGet.Format("2006-01-02"),
-		startGet.Format("15:04:05"),
+		startDate),
+		startTime,
 		bodyLength,
 		getElapsed,
 		readElapsed,
