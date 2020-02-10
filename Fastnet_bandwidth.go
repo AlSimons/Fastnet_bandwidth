@@ -11,11 +11,14 @@ import (
 
 // Write the output to the current directory.
 var outFilePath = "bandwidth_monitor_log.txt"
+
 // Keeping track of firstTime lets us get immediate output instead
 // of waiting for the interval timer.
 var firstTime = true
+
 // Seconds to wait for a complete response
 var timeout = time.Duration(90)
+
 // Interval between runs
 var interval = time.Duration(10)
 
@@ -33,10 +36,10 @@ func main() {
 	// statically instead of using a slice, we would need to be sure
 	// to change the dimension every time we added or commented out
 	// a file.
+	urls := make([]fileInfo, 0, 10)
 
 	//PLEASE CHANGE these URLs if you want to use this and you're not
 	// Al.  These hit on his hosting site.
-	urls := make([]fileInfo, 0, 10)
 	urls = append(urls, fileInfo{
 		url:  "http://simonshome.org/tenk_random.txt",
 		size: 10240})
@@ -169,7 +172,7 @@ func doTest(url fileInfo) {
 	megaBitsPerSec := bitsPerSec / 1000000.0
 
 	msg := fmt.Sprintf("%s\t%s\t%d\t%6.4f\t%6.4f\t%3.1f\n",
-		startDate),
+		startDate,
 		startTime,
 		bodyLength,
 		getElapsed,
