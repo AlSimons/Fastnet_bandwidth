@@ -17,10 +17,10 @@ var outFilePath = "bandwidth_monitor_log.txt"
 var firstTime = true
 
 // Seconds to wait for a complete response
-var timeout = time.Duration(90)
+var timeout = time.Duration(45)
 
 // Interval between runs
-var interval = time.Duration(10)
+var interval = time.Duration(2)
 
 // Keep track of the file size as well as the URL. This lets us
 // display the size in the log in the event the request times out
@@ -52,6 +52,11 @@ func main() {
 		url:  "http://simonshome.org/two_meg_random.txt",
 		size: 2000000})
 
+	/**
+
+	Don't use these larger sizes for now, while we lower the interval
+	to 2 minutes.
+
 	urls = append(urls, fileInfo{
 		url:  "http://simonshome.org/four_meg_random.txt",
 		size: 4000000})
@@ -63,6 +68,7 @@ func main() {
 	urls = append(urls, fileInfo{
 		url:  "http://simonshome.org/ten_meg_random.txt",
 		size: 10000000})
+	*/
 
 	outputHeaderIfNeeded(outFilePath)
 
